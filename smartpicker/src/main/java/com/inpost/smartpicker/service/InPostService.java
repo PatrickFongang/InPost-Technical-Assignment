@@ -27,26 +27,23 @@ public class InPostService {
 
 
     public List<Locker> fetchLockersByCity(String city) {
-        log.info("Rozpoczynam pobieranie paczkomatów dla miasta: {}", city);
-
         String url = "https://api-global-points.easypack24.net/v1/points?city=" + city;
 
         try {
             InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
 
             if (response != null && response.getItems() != null) {
-                log.info("Pomyślnie pobrano {} paczkomatów z InPost API.", response.getItems().size());
                 return response.getItems();
             }
-            log.warn("API InPost zwróciło pustą odpowiedź dla miasta: {}", city);
+            log.warn("InPost API returned empty response for city: {}", city);
             return Collections.emptyList();
         } catch (Exception e) {
-            log.error("Wystąpił błąd podczas komunikacji z InPost API dla miasta {}. Szczegóły: {}", city, e.getMessage());
-            throw new InPostApiException("Nie udało się pobrać danych z InPost API dla miasta: " + city);
+            log.error("Error communicating with InPost API for city {}. Details: {}", city, e.getMessage());
+            throw new InPostApiException("Failed to fetch data from InPost API for city: " + city);
         }
     }
     public List<Locker> searchLockers(LockerSearchRequestDto request) {
-        log.info("Wyszukiwanie paczkomatów: miasto={}, radius={}, stressFree={}, thermo={}",
+        log.info("Searching for lockers: city={}, radius={}, stressFree={}, thermo={}",
                 request.city(), request.radiusInKm(), request.stressFreeMode(), request.thermoMode());
 
         List<Locker> allLockers = fetchLockersByCity(request.city());
