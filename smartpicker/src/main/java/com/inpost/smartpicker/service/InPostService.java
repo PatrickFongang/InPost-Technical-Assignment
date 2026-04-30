@@ -1,12 +1,12 @@
 package com.inpost.smartpicker.service;
 
+import com.inpost.smartpicker.dto.search.LockerSearchRequestDto;
 import com.inpost.smartpicker.exception.InPostApiException;
 import com.inpost.smartpicker.model.InPostResponse;
 import com.inpost.smartpicker.model.Locker;
 import com.inpost.smartpicker.util.DistanceCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -45,34 +45,32 @@ public class InPostService {
             throw new InPostApiException("Nie udało się pobrać danych z InPost API dla miasta: " + city);
         }
     }
-    public List<Locker> searchLockers(String city, double userLat, double userLon, double radiusInKm, boolean stressFreeMode, boolean thermoMode) {
+    public List<Locker> searchLockers(LockerSearchRequestDto request) {
         log.info("Wyszukiwanie paczkomatów: miasto={}, radius={}, stressFree={}, thermo={}",
-                city, radiusInKm, stressFreeMode, thermoMode);
+                request.city(), request.radiusInKm(), request.stressFreeMode(), request.thermoMode());
 
-        List<Locker> allLockers = fetchLockersByCity(city);
+        List<Locker> allLockers = fetchLockersByCity(request.city());
 
         allLockers.forEach(locker -> {
-            if (locker.getLocation() != null && locker.getLocation().getLatitude() != null &&
-                    locker.getLocation().getLongitude() != null) {
+            if (locker.getLocation() != null && locker.getLocation().getLatitude() != null && locker.getLocation().getLongitude() != null) {
                 double distance = distanceCalculator.calculateDistanceInKm(
-                        userLat, userLon,
+                        request.userLat(), request.userLon(),
                         locker.getLocation().getLatitude(), locker.getLocation().getLongitude()
                 );
                 locker.setDistance(Math.round(distance * 100.0) / 100.0);
             }
         });
 
-        Predicate<Locker> searchFilter = isWithinRadius(radiusInKm);
+        Predicate<Locker> searchFilter = isWithinRadius(request.radiusInKm());
 
-        if (stressFreeMode) {
-            log.info("Dodaję filtr Trybu Bezstresowego");
+        if (request.stressFreeMode()) {
             searchFilter = searchFilter.and(isStressFree());
         }
 
-        if (thermoMode) {
-            log.info("Dodaję filtr Trybu Termo-ochronnego");
+        if (request.thermoMode()) {
             searchFilter = searchFilter.and(isThermoFriendly());
         }
+
 
         return allLockers.stream()
                 .filter(searchFilter)
