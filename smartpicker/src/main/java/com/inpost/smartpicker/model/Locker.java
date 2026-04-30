@@ -1,4 +1,4 @@
-﻿package com.inpost.smartpicker.model;
+package com.inpost.smartpicker.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,5 +25,5 @@ public class Locker {
     @JsonProperty("address_details")
     private AddressDetails addressDetails;
 
-
+    private Double distance;
 }

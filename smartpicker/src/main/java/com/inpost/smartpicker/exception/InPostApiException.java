@@ -1,4 +1,4 @@
-﻿package com.inpost.smartpicker.exception;
+package com.inpost.smartpicker.exception;
 
 public class InPostApiException extends RuntimeException {
     public InPostApiException(String message) {

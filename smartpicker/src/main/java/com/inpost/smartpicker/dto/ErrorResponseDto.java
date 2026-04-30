@@ -1,4 +1,4 @@
-﻿package com.inpost.smartpicker.dto;
+package com.inpost.smartpicker.dto;
 
 import lombok.Builder;
 import lombok.Data;

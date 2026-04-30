@@ -1,4 +1,4 @@
-﻿package com.inpost.smartpicker.exception;
+package com.inpost.smartpicker.exception;
 
 import com.inpost.smartpicker.dto.ErrorResponseDto;
 import jakarta.servlet.http.HttpServletRequest;
