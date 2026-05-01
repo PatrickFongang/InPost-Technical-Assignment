@@ -48,7 +48,7 @@ public class AppConfig {
     @Bean
     public Caffeine<Object, Object> caffeineConfig() {
         return Caffeine.newBuilder()
-                .expireAfterWrite(12, TimeUnit.HOURS)
+                .expireAfterWrite(24, TimeUnit.HOURS)
                 .initialCapacity(50)
                 .maximumSize(5000);
     }

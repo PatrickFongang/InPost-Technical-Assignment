@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -23,7 +22,7 @@ public class InPostApiClient {
     private final RestTemplate restTemplate;
     private final ExecutorService ioExecutor;
 
-    @Cacheable(value = "lockersByCity", key = "#city.toLowerCase()")
+    @Cacheable(value = "lockersByCity", key = "#city.toLowerCase()", sync = true)
     public List<Locker> fetchLockersByCity(String city) {
         log.info("No cache found. Fetching lockers for city: {}", city);
 
