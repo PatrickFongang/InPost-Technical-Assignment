@@ -32,6 +32,7 @@ build/
 **/.run/
 
 .env
+venv/
 *.env
 *.env.*
 *secret*
