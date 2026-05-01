@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -27,16 +28,34 @@ public class InPostService {
 
 
     public List<Locker> fetchLockersByCity(String city) {
-        String url = "https://api-global-points.easypack24.net/v1/points?city=" + city;
+        List<Locker> allLockers = new ArrayList<>();
+
+        int currentPage = 1;
+        int totalPages = 1;
 
         try {
-            InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
+            do {
+                String url = String.format("https://api-global-points.easypack24.net/v1/points?city=%s&page=%d", city, currentPage);
+                log.debug("Fetching page {} for city {}", currentPage, city);
 
-            if (response != null && response.getItems() != null) {
-                return response.getItems();
-            }
-            log.warn("InPost API returned empty response for city: {}", city);
-            return Collections.emptyList();
+                InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
+
+                if (response != null) {
+                    if (response.getItems() != null) {
+                        allLockers.addAll(response.getItems());
+                    }
+                    if (response.getTotalPages() != null) {
+                        totalPages = response.getTotalPages();
+                    }
+                }
+
+                currentPage++;
+
+            } while (currentPage <= totalPages);
+
+            log.info("Successfully fetched {} lockers across {} pages for city: {}", allLockers.size(), totalPages, city);
+            return allLockers;
+
         } catch (Exception e) {
             log.error("Error communicating with InPost API for city {}. Details: {}", city, e.getMessage());
             throw new InPostApiException("Failed to fetch data from InPost API for city: " + city);
@@ -68,11 +87,15 @@ public class InPostService {
             searchFilter = searchFilter.and(isThermoFriendly());
         }
 
-
-        return allLockers.stream()
+        List<Locker> filteredLockers = allLockers.stream()
                 .filter(searchFilter)
                 .sorted(Comparator.comparing(Locker::getDistance))
                 .toList();
+
+        log.info("Found {} lockers matching criteria in {} (out of {} total in city)",
+                filteredLockers.size(), request.city(), allLockers.size());
+
+        return filteredLockers;
     }
 
 }
