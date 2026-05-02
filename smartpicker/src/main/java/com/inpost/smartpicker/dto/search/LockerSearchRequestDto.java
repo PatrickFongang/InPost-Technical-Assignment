@@ -1,5 +1,6 @@
 package com.inpost.smartpicker.dto.search;
 
+import com.inpost.smartpicker.validation.ValidDeliveryDate;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -16,6 +17,7 @@ public record LockerSearchRequestDto(
         @Positive(message = "Search radius must be a positive number")
         @Max(value = 20, message = "Maximum supported search radius is 20 km")
         Double radiusInKm,
+        @ValidDeliveryDate
         LocalDate expectedDeliveryDate,
         Boolean stressFreeMode,
         Boolean thermoMode

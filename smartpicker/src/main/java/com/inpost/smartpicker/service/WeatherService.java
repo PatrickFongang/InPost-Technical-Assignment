@@ -33,8 +33,8 @@ public class WeatherService {
             OpenMeteoResponse response = restTemplate.getForObject(url, OpenMeteoResponse.class);
 
             if (response == null || response.getDaily() == null
-                    || response.getDaily().getTemperatureMin() == null || !response.getDaily().getTemperatureMin().isEmpty()
-                    || response.getDaily().getTemperatureMax() == null || !response.getDaily().getTemperatureMax().isEmpty()) {
+                    || response.getDaily().getTemperatureMin() == null || response.getDaily().getTemperatureMin().isEmpty()
+                    || response.getDaily().getTemperatureMax() == null || response.getDaily().getTemperatureMax().isEmpty()) {
                 throw new WeatherApiException("Open-Meteo API returned empty or malformed daily forecast data.");
             }
 
