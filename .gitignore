@@ -49,3 +49,6 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local Cache Snapshots
+lockers_snapshot.json

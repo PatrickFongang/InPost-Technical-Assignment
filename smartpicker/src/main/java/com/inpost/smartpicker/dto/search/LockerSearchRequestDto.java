@@ -3,8 +3,6 @@ package com.inpost.smartpicker.dto.search;
 import jakarta.validation.constraints.*;
 
 public record LockerSearchRequestDto(
-        @NotBlank(message = "City name cannot be blank")
-        String city,
         @NotNull(message = "Latitude (userLat) is required")
         @Min(value = -90, message = "Latitude cannot be less than -90")
         @Max(value = 90, message = "Latitude cannot be greater than 90")

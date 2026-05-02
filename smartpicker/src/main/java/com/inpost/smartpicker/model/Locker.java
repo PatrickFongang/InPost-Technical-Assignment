@@ -11,6 +11,10 @@ import java.util.List;
 public class Locker {
     private String name;
 
+    private String country;
+
+    private List<String> type;
+
     @JsonProperty("location_type")
     private String locationType;
 
@@ -25,5 +29,7 @@ public class Locker {
     @JsonProperty("address_details")
     private AddressDetails addressDetails;
 
+    @JsonProperty("locker_availability")
+    private LockerAvailability lockerAvailability;
     private Double distance;
 }
