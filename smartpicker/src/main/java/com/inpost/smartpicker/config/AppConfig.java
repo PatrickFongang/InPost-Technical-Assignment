@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +25,10 @@ public class AppConfig {
     @Bean
     public ExecutorService executorService() {
         return Executors.newFixedThreadPool(50);
+    }
+    @Bean
+    public ObjectMapper objectMapper(){
+        return new ObjectMapper();
     }
 
     @Bean
