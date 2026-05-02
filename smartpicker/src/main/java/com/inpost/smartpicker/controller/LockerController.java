@@ -1,6 +1,7 @@
 package com.inpost.smartpicker.controller;
 
 import com.inpost.smartpicker.dto.search.LockerSearchRequestDto;
+import com.inpost.smartpicker.dto.search.LockerSearchResponseDto;
 import com.inpost.smartpicker.model.Locker;
 import com.inpost.smartpicker.service.InPostService;
 import jakarta.validation.Valid;
@@ -21,10 +22,10 @@ public class LockerController {
     private final InPostService inPostService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<Locker>> searchNearestLockers(@Valid @RequestBody LockerSearchRequestDto request) {
+    public ResponseEntity<LockerSearchResponseDto> searchNearestLockers(@Valid @RequestBody LockerSearchRequestDto request) {
         log.info("Received locker search request with parameters: {}", request);
 
-        List<Locker> results = inPostService.searchLockers(request);
+        LockerSearchResponseDto results = inPostService.searchLockers(request);
 
         return ResponseEntity.ok(results);
     }

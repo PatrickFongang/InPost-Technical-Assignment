@@ -2,6 +2,8 @@ package com.inpost.smartpicker.dto.search;
 
 import jakarta.validation.constraints.*;
 
+import java.time.LocalDate;
+
 public record LockerSearchRequestDto(
         @NotNull(message = "Latitude (userLat) is required")
         @Min(value = -90, message = "Latitude cannot be less than -90")
@@ -14,9 +16,9 @@ public record LockerSearchRequestDto(
         @Positive(message = "Search radius must be a positive number")
         @Max(value = 20, message = "Maximum supported search radius is 20 km")
         Double radiusInKm,
+        LocalDate expectedDeliveryDate,
         Boolean stressFreeMode,
         Boolean thermoMode
-
 ) {
     public LockerSearchRequestDto {
         if (radiusInKm == null) radiusInKm = 2.0;

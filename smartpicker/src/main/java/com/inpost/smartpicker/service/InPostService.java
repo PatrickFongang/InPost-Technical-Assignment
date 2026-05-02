@@ -1,6 +1,9 @@
 package com.inpost.smartpicker.service;
 
 import com.inpost.smartpicker.dto.search.LockerSearchRequestDto;
+import com.inpost.smartpicker.dto.search.LockerSearchResponseDto;
+import com.inpost.smartpicker.dto.weather.WeatherInfoDto;
+import com.inpost.smartpicker.exception.WeatherApiException;
 import com.inpost.smartpicker.model.Locker;
 import com.inpost.smartpicker.util.DistanceCalculator;
 import com.inpost.smartpicker.util.GeoGridUtil;
@@ -21,19 +24,20 @@ public class InPostService {
 
     private final LocalLockerCache localLockerCache;
     private final DistanceCalculator distanceCalculator;
+    private final WeatherService weatherService;
 
-    public List<Locker> searchLockers(LockerSearchRequestDto request) {
+    public LockerSearchResponseDto searchLockers(LockerSearchRequestDto request) {
         log.info("Searching for lockers near coordinates: [{}, {}], radius={}km",
                 request.userLat(), request.userLon(), request.radiusInKm());
 
         int searchDepth = request.radiusInKm().intValue() + 1;
-        List<String> targetGrids = GeoGridUtil.getNeighboringGridKeys(request.userLat(), request.userLon(),searchDepth);
+        List<String> targetGrids = GeoGridUtil.getNeighboringGridKeys(request.userLat(), request.userLon(), searchDepth);
 
         List<Locker> areaLockers = localLockerCache.getLockersForGrids(targetGrids);
 
         if (areaLockers.isEmpty()) {
             log.info("No lockers found in the surrounding geospatial grids.");
-            return areaLockers;
+            return new LockerSearchResponseDto(areaLockers, null);
         }
 
         areaLockers.forEach(locker -> {
@@ -45,8 +49,12 @@ public class InPostService {
         });
 
         Predicate<Locker> searchFilter = isWithinRadius(request.radiusInKm());
-        if (request.stressFreeMode()) { searchFilter = searchFilter.and(isStressFree()); }
-        if (request.thermoMode()) { searchFilter = searchFilter.and(isThermoFriendly()); }
+        if (request.stressFreeMode()) {
+            searchFilter = searchFilter.and(isStressFree());
+        }
+        if (request.thermoMode()) {
+            searchFilter = searchFilter.and(isThermoFriendly());
+        }
 
         List<Locker> filteredLockers = areaLockers.stream()
                 .filter(searchFilter)
@@ -56,6 +64,17 @@ public class InPostService {
         log.info("Found {} lockers matching criteria out of {} machines in the search sector.",
                 filteredLockers.size(), areaLockers.size());
 
-        return filteredLockers;
+        return new LockerSearchResponseDto(filteredLockers, handleWeatherInfo(request));
+    }
+
+    private WeatherInfoDto handleWeatherInfo(LockerSearchRequestDto request) {
+        if (request.expectedDeliveryDate() == null) return null;
+
+        try {
+            return weatherService.getWeatherForecast(request.userLat(), request.userLon(), request.expectedDeliveryDate());
+        } catch (WeatherApiException e) {
+            log.warn("Weather integration failed. Proceeding without weather warnings. Reason: {}", e.getMessage());
+            return null;
+        }
     }
 }
