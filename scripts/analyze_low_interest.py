@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 
-def generate_low_interest_report(input_file="../lockers_snapshot.json", output_file="low_interest_feasibility_report.md"):
+def generate_low_interest_report(input_file="../backend/lockers_snapshot.json", output_file="low_interest_feasibility_report.md"):
     print(f"Loading data from snapshot: {input_file}...")
 
     try:
