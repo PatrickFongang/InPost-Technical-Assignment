@@ -5,8 +5,10 @@ import com.inpost.smartpicker.dto.search.LockerSearchResponseDto;
 import com.inpost.smartpicker.dto.weather.WeatherInfoDto;
 import com.inpost.smartpicker.exception.WeatherApiException;
 import com.inpost.smartpicker.model.Locker;
+import com.inpost.smartpicker.model.enums.Reliability;
 import com.inpost.smartpicker.util.DistanceCalculator;
 import com.inpost.smartpicker.util.GeoGridUtil;
+import com.inpost.smartpicker.util.ReliabilityScorer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,15 +48,21 @@ public class InPostService {
                     locker.getLocation().getLatitude(), locker.getLocation().getLongitude()
             );
             locker.setDistance(Math.round(distance * 100.0) / 100.0);
+
+            locker.setEasyAccessReliability(ReliabilityScorer.calculateEasyAccessScore(locker));
+            locker.setStressFreeReliability(ReliabilityScorer.calculateStressFreeScore(locker));
         });
 
         Predicate<Locker> searchFilter = isWithinRadius(request.radiusInKm());
-        if (request.stressFreeMode()) {
-            searchFilter = searchFilter.and(isStressFree());
-        }
+
         if (request.thermoMode()) {
             searchFilter = searchFilter.and(isThermoFriendly());
         }
+
+        if (request.requireEasyAccess()) {
+            searchFilter = searchFilter.and(locker -> locker.getEasyAccessReliability() != Reliability.NONE);
+        }
+
 
         List<Locker> filteredLockers = areaLockers.stream()
                 .filter(searchFilter)

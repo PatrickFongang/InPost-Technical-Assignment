@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.inpost.smartpicker.model.enums.Reliability;
 import lombok.Data;
+import lombok.Getter;
 
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class Locker {
     private String locationType;
 
     @JsonProperty("easy_access_zone")
-    private boolean easyAccessZone;
+    private Boolean easyAccessZone;
 
     @JsonProperty("recommended_low_interest_box_machines_list")
     private List<String> recommendedLowInterestBoxMachinesList;

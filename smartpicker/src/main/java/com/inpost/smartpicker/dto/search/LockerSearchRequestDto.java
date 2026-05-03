@@ -19,12 +19,14 @@ public record LockerSearchRequestDto(
         Double radiusInKm,
         @ValidDeliveryDate
         LocalDate expectedDeliveryDate,
-        Boolean stressFreeMode,
+        Boolean requireEasyAccess,
+        Boolean requireAntiBounce,
         Boolean thermoMode
 ) {
     public LockerSearchRequestDto {
         if (radiusInKm == null) radiusInKm = 2.0;
-        if (stressFreeMode == null) stressFreeMode = false;
+        if (requireAntiBounce == null) requireAntiBounce = false;
+        if (requireEasyAccess == null) requireEasyAccess = false;
         if (thermoMode == null) thermoMode = false;
     }
 }

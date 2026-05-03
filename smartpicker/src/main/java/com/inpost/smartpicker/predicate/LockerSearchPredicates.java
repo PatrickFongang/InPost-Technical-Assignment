@@ -11,11 +11,6 @@ public class LockerSearchPredicates {
         return locker -> locker.getDistance() != null && locker.getDistance() <= radiusInKm;
     }
 
-    public static Predicate<Locker> isStressFree() {
-        return locker -> locker.getRecommendedLowInterestBoxMachinesList() != null
-                && !locker.getRecommendedLowInterestBoxMachinesList().isEmpty();
-    }
-
     public static Predicate<Locker> isThermoFriendly() {
         return locker -> "Indoor".equalsIgnoreCase(locker.getLocationType());
     }
