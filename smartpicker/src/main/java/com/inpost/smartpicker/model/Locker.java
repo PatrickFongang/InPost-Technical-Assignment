@@ -2,6 +2,7 @@ package com.inpost.smartpicker.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.inpost.smartpicker.model.enums.Reliability;
 import lombok.Data;
 
 import java.util.List;
@@ -31,5 +32,11 @@ public class Locker {
 
     @JsonProperty("locker_availability")
     private LockerAvailability lockerAvailability;
+
     private Double distance;
+
+    private Reliability easyAccessReliability;
+    private Reliability stressFreeReliability;
+
+    private Boolean lowInterest;
 }

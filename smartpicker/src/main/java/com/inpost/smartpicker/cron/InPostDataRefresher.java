@@ -1,5 +1,6 @@
 package com.inpost.smartpicker.cron;
 
+import com.inpost.smartpicker.exception.InPostApiException;
 import com.inpost.smartpicker.model.InPostResponse;
 import com.inpost.smartpicker.model.Locker;
 import com.inpost.smartpicker.service.DiskSnapshotService;
@@ -11,12 +12,10 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -60,63 +59,91 @@ public class InPostDataRefresher {
         log.info("STARTING GLOBAL IN-MEMORY CACHE REFRESH...");
         long startTime = System.currentTimeMillis();
 
-        String firstPageUrl = "https://api-global-points.easypack24.net/v1/points?page=1";
-        InPostResponse firstResponse;
-
         try {
-            firstResponse = restTemplate.getForObject(firstPageUrl, InPostResponse.class);
+            InPostResponse firstResponse = fetchInitialPage();
+            if (firstResponse == null || firstResponse.getTotalPages() == null) return;
+
+            List<Locker> allLockers = new ArrayList<>(firstResponse.getItems());
+            int totalPages = firstResponse.getTotalPages();
+
+            if (totalPages > 1) {
+                allLockers.addAll(fetchAllRemainingPages(totalPages));
+            }
+
+            Set<String> lowInterestNamesSet = buildLowInterestSet(allLockers);
+            Map<String, List<Locker>> groupedByGrid = processAndGroupLockers(allLockers, lowInterestNamesSet);
+
+            localLockerCache.swapCache(groupedByGrid);
+            diskSnapshotService.saveSnapshot(groupedByGrid);
+
+            long duration = (System.currentTimeMillis() - startTime) / 1000;
+            log.info("FINISHED. Cache refreshed in {} seconds. Spatial map contains {} active grids.", duration, groupedByGrid.size());
+
+        } catch (InPostApiException e) {
+            log.error("Cache refresh aborted due to InPost API failure: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Failed to fetch the initial page from InPost API: {}", e.getMessage());
-            return;
+            log.error("Unexpected critical error during cache refresh: {}", e.getMessage(), e);
         }
+    }
 
-        if (firstResponse == null || firstResponse.getTotalPages() == null) return;
 
-        int totalPages = firstResponse.getTotalPages();
-        List<Locker> allLockers = new ArrayList<>(firstResponse.getItems());
+    private InPostResponse fetchInitialPage() {
+        String url = "https://api-global-points.easypack24.net/v1/points?page=1";
+        try {
+            return restTemplate.getForObject(url, InPostResponse.class);
+        } catch (RestClientException e) {
+            throw new InPostApiException("Failed to fetch the initial page from InPost API.", e);
+        }
+    }
 
-        log.info("Found {} API pages. Firing 50 concurrent requests...", totalPages);
-
+    private List<Locker> fetchAllRemainingPages(int totalPages) {
+        log.info("Found {} API pages. Firing concurrent requests...", totalPages);
         List<CompletableFuture<List<Locker>>> futures = new ArrayList<>();
 
         for (int i = 2; i <= totalPages; i++) {
             final int page = i;
-            CompletableFuture<List<Locker>> future = CompletableFuture.supplyAsync(() -> {
-                String url = String.format("https://api-global-points.easypack24.net/v1/points?page=%d", page);
-                try {
-                    InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
-                    return (response != null && response.getItems() != null) ? response.getItems() : Collections.<Locker>emptyList();
-                } catch (Exception e) {
-                    log.error("Failed to fetch page {}", page);
-                    return Collections.<Locker>emptyList();
-                }
-            }, ioExecutor);
+            CompletableFuture<List<Locker>> future = CompletableFuture.supplyAsync(() -> fetchPageSafely(page), ioExecutor);
             futures.add(future);
         }
 
-        List<Locker> remainingLockers = futures.stream()
+        return futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
                 .toList();
+    }
 
-        allLockers.addAll(remainingLockers);
+    private List<Locker> fetchPageSafely(int page) {
+        String url = String.format("https://api-global-points.easypack24.net/v1/points?page=%d", page);
+        try {
+            InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
+            return (response != null && response.getItems() != null) ? response.getItems() : Collections.emptyList();
+        } catch (RestClientException e) {
+            log.warn("Failed to fetch page {}. Skipping this page. Reason: {}", page, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
 
-        log.info("Successfully fetched {} lockers. Starting strict filtering and spatial binning...", allLockers.size());
+    private Set<String> buildLowInterestSet(List<Locker> allLockers) {
+        Set<String> lowInterestNamesSet = allLockers.stream()
+                .filter(l -> l.getRecommendedLowInterestBoxMachinesList() != null)
+                .flatMap(l -> l.getRecommendedLowInterestBoxMachinesList().stream())
+                .collect(Collectors.toSet());
 
-        Map<String, List<Locker>> groupedByGrid = allLockers.stream()
+        log.info("Identified {} genuinely low-interest machines across the network.", lowInterestNamesSet.size());
+        return lowInterestNamesSet;
+    }
+
+    private Map<String, List<Locker>> processAndGroupLockers(List<Locker> allLockers, Set<String> lowInterestNamesSet) {
+        log.info("Starting strict filtering, tagging, and spatial binning for {} lockers...", allLockers.size());
+        return allLockers.stream()
                 .filter(hasValidCoordinates())
                 .filter(isNotTestMachine())
                 .map(this::normalizeCityName)
+                .peek(locker -> locker.setLowInterest(lowInterestNamesSet.contains(locker.getName())))
                 .collect(Collectors.groupingBy(l -> GeoGridUtil.getGridKey(
                         l.getLocation().getLatitude(),
                         l.getLocation().getLongitude()
                 )));
-
-        localLockerCache.swapCache(groupedByGrid);
-        diskSnapshotService.saveSnapshot(groupedByGrid);
-
-        long duration = (System.currentTimeMillis() - startTime) / 1000;
-        log.info("FINISHED. Cache refreshed in {} seconds. Spatial map contains {} active grids.", duration, groupedByGrid.size());
     }
 
     private Locker normalizeCityName(Locker locker) {
