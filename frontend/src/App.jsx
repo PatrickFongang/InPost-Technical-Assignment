@@ -93,7 +93,7 @@ function App() {
   };
 
   const shouldShowWeatherWarning =
-    weatherInfo && !thermo && weatherInfo.extreme;
+    weatherInfo && !thermo && weatherInfo.isExtreme;
 
   return (
     <div className="h-screen w-full flex flex-col bg-white overflow-hidden">
@@ -344,6 +344,11 @@ function App() {
                     >
                       Stress Free: {locker.stressFreeReliability || "N/A"}
                     </span>
+                    {locker.distance != null && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100 px-2 py-1 rounded shrink-0 ml-auto">
+                        {locker.distance.toFixed(2)} km
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
