@@ -17,6 +17,9 @@ public class Locker {
 
     private List<String> type;
 
+    @JsonProperty("opening_hours")
+    private String openingHours;
+
     @JsonProperty("location_type")
     private String locationType;
 
