@@ -146,20 +146,39 @@ public class InPostDataRefresher {
     }
 
     /**
-     * Fetches a single page of locker data from the InPost API, handling potential errors.
+     * Fetches a single page of locker data from the InPost API with a retry mechanism.
      *
      * @param page the page number to fetch
-     * @return a {@link List} of {@link Locker} objects from the page, or an empty list if the fetch fails
+     * @return a {@link List} of {@link Locker} objects from the page
+     * @throws InPostApiException if the fetch fails after all retry attempts
      */
     private List<Locker> fetchPageSafely(int page) {
         String url = String.format("https://api-global-points.easypack24.net/v1/points?page=%d", page);
-        try {
-            InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
-            return (response != null && response.getItems() != null) ? response.getItems() : Collections.emptyList();
-        } catch (RestClientException e) {
-            log.warn("Failed to fetch page {}. Skipping this page. Reason: {}", page, e.getMessage());
-            return Collections.emptyList();
+        int maxRetries = 3;
+        int attempt = 0;
+
+        while (attempt < maxRetries) {
+            try {
+                InPostResponse response = restTemplate.getForObject(url, InPostResponse.class);
+                return (response != null && response.getItems() != null) ? response.getItems() : Collections.emptyList();
+            } catch (RestClientException e) {
+                attempt++;
+                log.warn("Attempt {}/{} failed for page {}. Reason: {}", attempt, maxRetries, page, e.getMessage());
+
+                if (attempt >= maxRetries) {
+                    log.error("All {} attempts failed for page {}. Aborting fetch process.", maxRetries, page);
+                    throw new InPostApiException("Failed to fetch page " + page + " after " + maxRetries + " attempts", e);
+                }
+
+                try {
+                    Thread.sleep(1000L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new InPostApiException("Thread interrupted while retrying page " + page, ie);
+                }
+            }
         }
+        return Collections.emptyList();
     }
 
     /**
