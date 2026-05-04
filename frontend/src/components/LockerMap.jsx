@@ -5,25 +5,39 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
+// Domyślna niebieska ikona
 let DefaultIcon = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow,
   iconSize: [25, 41],
-  iconAnchor: [12, 41]
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34]
 });
+
+// Czerwona ikona dla zaznaczonego paczkomatu
+let SelectedIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34]
+});
+
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const MapUpdater = ({ center }) => {
   const map = useMap();
   useEffect(() => {
     if (center) {
-      map.flyTo(center, 14, { duration: 1.5 });
+      // Zmieniłem zoom na 16 żeby było lepiej widać konkretny paczkomat po kliknięciu
+      map.flyTo(center, 16, { duration: 1.5 });
     }
   }, [center, map]);
   return null;
 };
 
-const LockerMap = ({ centerPosition, lockers = [] }) => {
+// Dodano selectedLocker do propsów
+const LockerMap = ({ centerPosition, lockers = [], selectedLocker = null }) => {
   return (
     <MapContainer center={[52.0, 19.0]} zoom={5} className="h-full w-full z-0">
       <TileLayer
@@ -36,10 +50,15 @@ const LockerMap = ({ centerPosition, lockers = [] }) => {
       {lockers.map((locker) => {
         if (!locker.location || !locker.location.latitude || !locker.location.longitude) return null;
 
+        // Sprawdzamy czy ten paczkomat jest obecnie kliknięty/wybrany
+        const isSelected = locker.name === selectedLocker;
+
         return (
           <Marker 
             key={locker.name} 
             position={[locker.location.latitude, locker.location.longitude]}
+            icon={isSelected ? SelectedIcon : DefaultIcon} // Podmiana ikony na czerwoną
+            zIndexOffset={isSelected ? 1000 : 0} // Żeby czerwona pineska była zawsze na wierzchu
           >
             <Popup>
               <div className="font-bold text-gray-800">{locker.name}</div>
@@ -57,7 +76,6 @@ const LockerMap = ({ centerPosition, lockers = [] }) => {
                   Easy Access: {locker.easyAccessReliability || 'N/A'}
                 </div>
 
-                {/* Poprawiony klucz dla dymku z mapy */}
                 <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 inline-block rounded border ${
                   locker.stressFreeReliability?.toUpperCase() === 'HIGH' ? 'bg-green-100 text-green-700 border-green-200' :
                   locker.stressFreeReliability?.toUpperCase() === 'MEDIUM' ? 'bg-orange-100 text-orange-700 border-orange-200' :
