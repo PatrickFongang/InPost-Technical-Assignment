@@ -20,6 +20,20 @@ public class WeatherService {
     private static final double MIN_SAFE_TEMP = 5.0;
     private static final double MAX_SAFE_TEMP = 25.0;
 
+    /**
+     * Fetches the weather forecast for the specified coordinates and date.
+     * <p>
+     * This method calls the Open-Meteo API to retrieve daily minimum and maximum temperatures.
+     * It then determines if the weather is extreme based on predefined safe temperature thresholds.
+     * </p>
+     *
+     * @param lat  the latitude of the location
+     * @param lon  the longitude of the location
+     * @param date the date for which the forecast is requested
+     * @return a {@link WeatherInfoDto} containing information about whether the weather is extreme,
+     *         and the retrieved minimum and maximum temperatures
+     * @throws WeatherApiException if the API response is null, malformed, or if there is a communication error with the API
+     */
     public WeatherInfoDto getWeatherForecast(double lat, double lon, LocalDate date) {
         log.info("Fetching weather forecast for coordinates: [{}, {}] on date: {}", lat, lon, date);
 

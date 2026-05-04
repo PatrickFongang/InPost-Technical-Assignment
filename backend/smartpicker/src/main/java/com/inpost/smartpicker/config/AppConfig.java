@@ -22,14 +22,17 @@ import java.util.concurrent.TimeUnit;
 @EnableCaching
 public class AppConfig {
 
+
     @Bean
     public ExecutorService executorService() {
         return Executors.newFixedThreadPool(50);
     }
+
     @Bean
     public ObjectMapper objectMapper(){
         return new ObjectMapper();
     }
+
 
     @Bean
     public RestTemplate restTemplate() {
@@ -50,6 +53,7 @@ public class AppConfig {
         return new RestTemplate(factory);
     }
 
+
     @Bean
     public Caffeine<Object, Object> caffeineConfig() {
         return Caffeine.newBuilder()
@@ -57,6 +61,7 @@ public class AppConfig {
                 .initialCapacity(50)
                 .maximumSize(5000);
     }
+
 
     @Bean
     public CacheManager cacheManager(Caffeine<Object, Object> caffeine) {

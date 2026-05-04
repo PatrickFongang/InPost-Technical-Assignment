@@ -20,6 +20,15 @@ public class DiskSnapshotService {
     private final ObjectMapper objectMapper;
     private static final String SNAPSHOT_FILE_PATH = "lockers_snapshot.json";
 
+    /**
+     * Saves the current in-memory cache of lockers to a local disk snapshot file.
+     * <p>
+     * The snapshot is saved in JSON format using the configured {@link ObjectMapper}.
+     * Any {@link IOException} during the save process is caught and logged as an error.
+     * </p>
+     *
+     * @param cache a {@link Map} where keys are geospatial grid identifiers and values are lists of {@link Locker} objects
+     */
     public void saveSnapshot(Map<String, List<Locker>> cache) {
         log.info("Saving in-memory grid to local disk snapshot...");
         long startTime = System.currentTimeMillis();
@@ -36,6 +45,16 @@ public class DiskSnapshotService {
         }
     }
 
+    /**
+     * Loads the locker cache from a local disk snapshot file.
+     * <p>
+     * If the snapshot file does not exist or if an error occurs during loading (e.g., file corruption),
+     * it returns {@code null} and logs the event.
+     * </p>
+     *
+     * @return a {@link Map} of grid identifiers to locker lists if the snapshot is successfully loaded,
+     *         or {@code null} if no snapshot exists or loading fails
+     */
     public Map<String, List<Locker>> loadSnapshot() {
         File file = new File(SNAPSHOT_FILE_PATH);
         if (!file.exists()) {

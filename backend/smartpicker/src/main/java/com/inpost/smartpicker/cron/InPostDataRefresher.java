@@ -32,6 +32,14 @@ public class InPostDataRefresher {
     private final LocalLockerCache localLockerCache;
     private final DiskSnapshotService diskSnapshotService;
 
+    /**
+     * Handles the application startup event to initialize the locker subsystem.
+     * <p>
+     * It attempts to restore the locker cache from a local disk snapshot.
+     * Regardless of whether the snapshot was restored, it triggers an asynchronous
+     * full refresh from the InPost API.
+     * </p>
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationStartup() {
         log.info("APPLICATION READY. Initializing Locker Subsystem...");
@@ -49,12 +57,25 @@ public class InPostDataRefresher {
         CompletableFuture.runAsync(this::executeFullRefresh, ioExecutor);
     }
 
+    /**
+     * Scheduled task that triggers a nightly synchronization of locker data.
+     * <p>
+     * This method runs based on a cron expression (daily at 03:00 AM).
+     * </p>
+     */
     @Scheduled(cron = "0 0 3 * * ?")
     public void onNightlySchedule() {
         log.info("CRON TRIGGERED: Starting nightly locker synchronization...");
         executeFullRefresh();
     }
 
+    /**
+     * Executes a full refresh of the locker cache.
+     * <p>
+     * This method fetches all locker data from the InPost API, processes and filters it,
+     * updates the in-memory cache, and saves a new disk snapshot.
+     * </p>
+     */
     private void executeFullRefresh() {
         log.info("STARTING GLOBAL IN-MEMORY CACHE REFRESH...");
         long startTime = System.currentTimeMillis();
@@ -87,6 +108,12 @@ public class InPostDataRefresher {
     }
 
 
+    /**
+     * Fetches the first page of locker data from the InPost API.
+     *
+     * @return an {@link InPostResponse} containing the first page of items and pagination metadata
+     * @throws InPostApiException if there is an error communicating with the API
+     */
     private InPostResponse fetchInitialPage() {
         String url = "https://api-global-points.easypack24.net/v1/points?page=1";
         try {
@@ -96,6 +123,12 @@ public class InPostDataRefresher {
         }
     }
 
+    /**
+     * Fetches all remaining pages of locker data concurrently.
+     *
+     * @param totalPages the total number of pages to fetch
+     * @return a consolidated {@link List} of {@link Locker} objects from all remaining pages
+     */
     private List<Locker> fetchAllRemainingPages(int totalPages) {
         log.info("Found {} API pages. Firing concurrent requests...", totalPages);
         List<CompletableFuture<List<Locker>>> futures = new ArrayList<>();
@@ -112,6 +145,12 @@ public class InPostDataRefresher {
                 .toList();
     }
 
+    /**
+     * Fetches a single page of locker data from the InPost API, handling potential errors.
+     *
+     * @param page the page number to fetch
+     * @return a {@link List} of {@link Locker} objects from the page, or an empty list if the fetch fails
+     */
     private List<Locker> fetchPageSafely(int page) {
         String url = String.format("https://api-global-points.easypack24.net/v1/points?page=%d", page);
         try {
@@ -123,6 +162,12 @@ public class InPostDataRefresher {
         }
     }
 
+    /**
+     * Identifies names of machines that are marked as low-interest in the network.
+     *
+     * @param allLockers the full list of lockers
+     * @return a {@link Set} of machine names that are considered low-interest
+     */
     private Set<String> buildLowInterestSet(List<Locker> allLockers) {
         Set<String> lowInterestNamesSet = allLockers.stream()
                 .filter(l -> l.getRecommendedLowInterestBoxMachinesList() != null)
@@ -133,6 +178,13 @@ public class InPostDataRefresher {
         return lowInterestNamesSet;
     }
 
+    /**
+     * Filters, normalizes, and groups lockers into geospatial grids.
+     *
+     * @param allLockers           the list of all retrieved lockers
+     * @param lowInterestNamesSet  a set of names for lockers to be marked as low-interest
+     * @return a {@link Map} of grid identifiers to lists of processed {@link Locker} objects
+     */
     private Map<String, List<Locker>> processAndGroupLockers(List<Locker> allLockers, Set<String> lowInterestNamesSet) {
         log.info("Starting strict filtering, tagging, and spatial binning for {} lockers...", allLockers.size());
         return allLockers.stream()
@@ -146,6 +198,12 @@ public class InPostDataRefresher {
                 )));
     }
 
+    /**
+     * Normalizes the city name in the locker's address to title case.
+     *
+     * @param locker the {@link Locker} object to normalize
+     * @return the same {@link Locker} object with a normalized city name
+     */
     private Locker normalizeCityName(Locker locker) {
         if (locker.getAddressDetails() != null && locker.getAddressDetails().getCity() != null) {
             String rawCity = locker.getAddressDetails().getCity().trim().toLowerCase();
