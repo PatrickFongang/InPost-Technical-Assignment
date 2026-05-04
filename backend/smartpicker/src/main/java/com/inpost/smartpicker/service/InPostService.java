@@ -32,37 +32,16 @@ public class InPostService {
         log.info("Searching for lockers near coordinates: [{}, {}], radius={}km",
                 request.userLat(), request.userLon(), request.radiusInKm());
 
-        int searchDepth = request.radiusInKm().intValue() + 1;
-        List<String> targetGrids = GeoGridUtil.getNeighboringGridKeys(request.userLat(), request.userLon(), searchDepth);
-
-        List<Locker> areaLockers = localLockerCache.getLockersForGrids(targetGrids);
+        List<Locker> areaLockers = fetchLockersFromGrids(request.userLat(), request.userLon(), request.radiusInKm());
 
         if (areaLockers.isEmpty()) {
             log.info("No lockers found in the surrounding geospatial grids.");
             return new LockerSearchResponseDto(areaLockers, null);
         }
 
-        areaLockers.forEach(locker -> {
-            double distance = distanceCalculator.calculateDistanceInKm(
-                    request.userLat(), request.userLon(),
-                    locker.getLocation().getLatitude(), locker.getLocation().getLongitude()
-            );
-            locker.setDistance(Math.round(distance * 100.0) / 100.0);
+        enrichLockersWithMetrics(areaLockers, request.userLat(), request.userLon());
 
-            locker.setEasyAccessReliability(ReliabilityScorer.calculateEasyAccessScore(locker));
-            locker.setStressFreeReliability(ReliabilityScorer.calculateStressFreeScore(locker));
-        });
-
-        Predicate<Locker> searchFilter = isWithinRadius(request.radiusInKm());
-
-        if (request.thermoMode()) {
-            searchFilter = searchFilter.and(isThermoFriendly());
-        }
-
-        List<Locker> filteredLockers = areaLockers.stream()
-                .filter(searchFilter)
-                .sorted(Comparator.comparing(Locker::getDistance))
-                .toList();
+        List<Locker> filteredLockers = filterAndSortLockers(areaLockers, request);
 
         log.info("Found {} lockers matching criteria out of {} machines in the search sector.",
                 filteredLockers.size(), areaLockers.size());
@@ -70,6 +49,36 @@ public class InPostService {
         return new LockerSearchResponseDto(filteredLockers, handleWeatherInfo(request));
     }
 
+    private List<Locker> fetchLockersFromGrids(Double lat, Double lon, Double radiusInKm) {
+        int searchDepth = radiusInKm.intValue() + 1;
+        List<String> targetGrids = GeoGridUtil.getNeighboringGridKeys(lat, lon, searchDepth);
+        return localLockerCache.getLockersForGrids(targetGrids);
+    }
+
+    private void enrichLockersWithMetrics(List<Locker> lockers, Double userLat, Double userLon) {
+        lockers.forEach(locker -> {
+            double distance = distanceCalculator.calculateDistanceInKm(
+                    userLat, userLon,
+                    locker.getLocation().getLatitude(), locker.getLocation().getLongitude()
+            );
+            locker.setDistance(Math.round(distance * 100.0) / 100.0);
+            locker.setEasyAccessReliability(ReliabilityScorer.calculateEasyAccessScore(locker));
+            locker.setStressFreeReliability(ReliabilityScorer.calculateStressFreeScore(locker));
+        });
+    }
+
+    private List<Locker> filterAndSortLockers(List<Locker> lockers, LockerSearchRequestDto request) {
+        Predicate<Locker> searchFilter = isWithinRadius(request.radiusInKm());
+
+        if (request.thermoMode()) {
+            searchFilter = searchFilter.and(isThermoFriendly());
+        }
+
+        return lockers.stream()
+                .filter(searchFilter)
+                .sorted(Comparator.comparing(Locker::getDistance))
+                .toList();
+    }
     private WeatherInfoDto handleWeatherInfo(LockerSearchRequestDto request) {
         if (request.expectedDeliveryDate() == null) return null;
 
