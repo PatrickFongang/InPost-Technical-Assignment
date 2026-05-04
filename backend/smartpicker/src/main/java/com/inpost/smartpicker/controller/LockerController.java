@@ -16,12 +16,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/lockers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 public class LockerController {
 
     private final InPostService inPostService;
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<LockerSearchResponseDto> searchNearestLockers(@Valid @RequestBody LockerSearchRequestDto request) {
         log.info("Received locker search request with parameters: {}", request);
 

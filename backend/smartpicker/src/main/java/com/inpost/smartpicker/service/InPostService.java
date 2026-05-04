@@ -59,9 +59,6 @@ public class InPostService {
             searchFilter = searchFilter.and(isThermoFriendly());
         }
 
-        if (request.requireEasyAccess()) {
-            searchFilter = searchFilter.and(locker -> locker.getEasyAccessReliability() != Reliability.NONE);
-        }
 
 
         List<Locker> filteredLockers = areaLockers.stream()
