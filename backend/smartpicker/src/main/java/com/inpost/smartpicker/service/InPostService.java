@@ -59,8 +59,6 @@ public class InPostService {
             searchFilter = searchFilter.and(isThermoFriendly());
         }
 
-
-
         List<Locker> filteredLockers = areaLockers.stream()
                 .filter(searchFilter)
                 .sorted(Comparator.comparing(Locker::getDistance))
