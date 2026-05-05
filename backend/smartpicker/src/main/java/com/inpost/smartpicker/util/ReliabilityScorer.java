@@ -18,8 +18,8 @@ public class ReliabilityScorer {
     public static Reliability calculateEasyAccessScore(Locker locker) {
         boolean isPokPop = locker.getType() != null &&
                 (locker.getType().contains("pok") || locker.getType().contains("pop"));
-        boolean hasEasyAccessFlag = locker.getEasyAccessZone() != null && locker.getEasyAccessZone();
-        boolean isLowInterest = locker.getLowInterest();
+        boolean hasEasyAccessFlag = Boolean.TRUE.equals(locker.getEasyAccessZone());
+        boolean isLowInterest = Boolean.TRUE.equals(locker.getLowInterest());
 
         if (isPokPop) {
             return Reliability.HIGH;
@@ -49,7 +49,7 @@ public class ReliabilityScorer {
                 (locker.getType().contains("pok") ||
                         locker.getType().contains("pop") ||
                         locker.getType().contains("parcel_locker_superpop"));
-        boolean isLowInterest = locker.getLowInterest();
+        boolean isLowInterest = Boolean.TRUE.equals(locker.getLowInterest());
 
         if (isSuperPoint) {
             return Reliability.HIGH;

@@ -5,7 +5,6 @@ import com.inpost.smartpicker.dto.search.LockerSearchResponseDto;
 import com.inpost.smartpicker.dto.weather.WeatherInfoDto;
 import com.inpost.smartpicker.exception.WeatherApiException;
 import com.inpost.smartpicker.model.Locker;
-import com.inpost.smartpicker.model.enums.Reliability;
 import com.inpost.smartpicker.util.DistanceCalculator;
 import com.inpost.smartpicker.util.GeoGridUtil;
 import com.inpost.smartpicker.util.ReliabilityScorer;
