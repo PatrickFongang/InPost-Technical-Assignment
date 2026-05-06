@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.inpost.smartpicker.model.enums.Reliability;
 import lombok.Data;
-import lombok.Getter;
 
 import java.util.List;
 

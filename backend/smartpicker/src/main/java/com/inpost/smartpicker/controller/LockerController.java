@@ -2,7 +2,6 @@ package com.inpost.smartpicker.controller;
 
 import com.inpost.smartpicker.dto.search.LockerSearchRequestDto;
 import com.inpost.smartpicker.dto.search.LockerSearchResponseDto;
-import com.inpost.smartpicker.model.Locker;
 import com.inpost.smartpicker.service.InPostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @Slf4j
 @RestController

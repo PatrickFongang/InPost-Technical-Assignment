@@ -17,7 +17,7 @@ public record LockerSearchRequestDto(
         @Positive(message = "Search radius must be a positive number")
         @Max(value = 20, message = "Maximum supported search radius is 20 km")
         Double radiusInKm,
-        //@ValidDeliveryDate
+        @ValidDeliveryDate
         LocalDate expectedDeliveryDate,
         Boolean thermoMode
 ) {
