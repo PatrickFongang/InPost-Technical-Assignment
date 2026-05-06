@@ -28,8 +28,7 @@ Before writing the code, I conducted informal user research via community pollin
 6. **Data Cleaning & Filtering:** Finally, Java predicates (informed by my Python data analysis) sanitize dirty data anomalies and apply the thermal logic. The remaining lockers are scored, sorted by exact distance, and returned to the user.
 
 ### 📸 Visuals
-<video src="./images/Demo.mp4" autoplay loop muted playsinline width="100%">
-</video>
+https://github.com/user-attachments/assets/987a20e4-aaf1-483e-bcbf-4e473dc05ff0
 
 ## Technologies
 
