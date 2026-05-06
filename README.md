@@ -22,22 +22,23 @@ Before writing the code, I conducted informal user research via community pollin
 ### ⚙️ How it works (The Architecture)
 1. **Seamless Geocoding:** The user types a natural text address (e.g., "Warszawa, Złota"). The React frontend uses the Nominatim (OpenStreetMap) API to translate this into exact latitude/longitude coordinates on the fly.
 2. **The POST Request:** The frontend sends a clean JSON payload (coordinates, radius, thermo-preference) to the Spring Boot backend.
-3. **In-Memory Storage (No Database):** To achieve sub-millisecond data retrieval, the application completely bypasses a traditional database. Instead, all locker data is held directly in RAM within the `LocalLockerCache`. This eliminates database query latency entirely.
-4. **Fast-Boot & Resilience via Snapshots:** Populating this in-memory cache with tens of thousands of lockers from the external InPost API takes time. To guarantee immediate application availability on server startup, the `InPostDataRefresher` instantly restores the RAM cache from a local disk backup (`lockers_snapshot.json`). A full API synchronization is then triggered asynchronously in the background.
-5. **Spatial Binning (Geospatial Grid):** Running distance calculations against 90,000+ lockers for every request is an expensive O(N) operation. To optimize this without a database, the `LocalLockerCache` groups lockers into a custom coordinate-based grid (`Map<String, List<Locker>>`). When a request comes in, the backend performs O(1) map lookups for the neighboring grid keys, drastically narrowing the search space from the entire country to just the local sector before applying the Haversine distance formula.
+3. **In-Memory Storage (No Database):** To achieve sub-millisecond data retrieval, the application completely bypasses a traditional database. Instead, all locker data is held directly in RAM within the [`LocalLockerCache`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/service/LocalLockerCache.java). This eliminates database query latency entirely.
+4. **Fast-Boot & Resilience via Snapshots:** Populating this in-memory cache with tens of thousands of lockers from the external InPost API takes time. To guarantee immediate application availability on server startup, the [`InPostDataRefresher`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/cron/InPostDataRefresher.java) instantly restores the RAM cache from a local disk backup (`lockers_snapshot.json`). A full API synchronization is then triggered asynchronously in the background.
+5. **Spatial Binning (Geospatial Grid):** Running distance calculations against 90,000+ lockers for every request is an expensive O(N) operation. To optimize this without a database, the [`LocalLockerCache`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/service/LocalLockerCache.java) groups lockers into a custom coordinate-based grid (`Map<String, List<Locker>>`). When a request comes in, the backend performs O(1) map lookups for the neighboring grid keys, drastically narrowing the search space from the entire country to just the local sector before applying the Haversine distance formula.
 6. **Data Cleaning & Filtering:** Finally, Java predicates (informed by my Python data analysis) sanitize dirty data anomalies and apply the thermal logic. The remaining lockers are scored, sorted by exact distance, and returned to the user.
 
 ### 📸 Visuals
-
+<video src="./images/Demo.mp4" autoplay loop muted playsinline width="100%">
+</video>
 
 ## Technologies
 
 **Backend:**
 - **Java 25 & Spring Boot 3**
-- **API Design & Standards:** Integrated **OpenAPI (Swagger)** for interactive API documentation and maintained extensive **JavaDoc** for code-level clarity. Implemented strict **Jakarta Validation** on Request DTOs to sanitize inputs, paired with a `@ControllerAdvice` **GlobalExceptionHandler** to guarantee consistent, standardized HTTP error responses.
+- **API Design & Standards:** Integrated **OpenAPI (Swagger)** for interactive API documentation and maintained extensive **JavaDoc** for code-level clarity. Implemented strict **Jakarta Validation** on Request DTOs to sanitize inputs, paired with a `@ControllerAdvice` [**GlobalExceptionHandler**](./backend/smartpicker/src/main/java/com/inpost/smartpicker/exception/GlobalExceptionHandler.java) to guarantee consistent, standardized HTTP error responses.
 - **JUnit 5, Mockito & AssertJ:** Used for robust, readable unit testing of isolated business logic
 - **Logback:** Configured for structured, daily rolling file logging and color-coded console outputs, ensuring production-ready observability.
-- **In-Memory Caching:** Implemented a `LocalLockerCache` combined with a Scheduled Cron job (`InPostDataRefresher`) to fetch, clean, and store locker data in memory, bypassing the need for a database and ensuring lightning-fast geospatial queries.
+- **In-Memory Caching:** Implemented a [`LocalLockerCache`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/service/LocalLockerCache.java) combined with a Scheduled Cron job ([`InPostDataRefresher`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/cron/InPostDataRefresher.java)) to fetch, clean, and store locker data in memory, bypassing the need for a database and ensuring lightning-fast geospatial queries.
 
 **Frontend:**
 - **React.js (Vite):** Selected for building a lightning-fast, reactive user interface with an excellent developer experience.
@@ -46,7 +47,7 @@ Before writing the code, I conducted informal user research via community pollin
 - **Lucide React:** Used for clean, consistent, and scalable iconography.
 
 **Data Analysis & Scripts:**
-- **Python:** Used extensively in the research phase (located in the `scripts/` directory) to analyze raw InPost API data.
+- **Python:** Used extensively in the research phase (located in the [`scripts/`](./scripts) directory) to analyze raw InPost API data.
 
 **External APIs:**
 - **Open-Meteo API:** Used for fetching highly accurate, free, and coordinate-based weather forecasts to trigger Thermo Mode alerts.
@@ -109,10 +110,10 @@ However, all core business logic, technology stack selection, and backend archit
 
 **A Data-Driven, Product-Oriented Mindset**
 
-During development, I didn't just blindly consume the InPost API based on its documentation. I wrote Python analyzers (located in the `scripts/` directory) to proactively investigate the raw data distributions. This saved me from over-engineering features that would provide zero value. Three key examples of this data-driven approach include:
+During development, I didn't just blindly consume the InPost API based on its documentation. I wrote Python analyzers (located in the [`scripts/`](./scripts) directory) to proactively investigate the raw data distributions. This saved me from over-engineering features that would provide zero value. Three key examples of this data-driven approach include:
 
-1. **Handling Dirty Raw Data (`dirty_data_report.md`):**<br>Working with the raw API data taught me never to trust the source blindly. My Python scripts (and the visual evidence in `dirty_data_proof.png`) revealed anomalies in the production dataset, specifically internal "TEST" machines leaking into the public API and severe inconsistencies in country naming conventions. To prevent showing fake lockers to users, I implemented strict filtering rules within `LockerDataCleaningPredicates.java` to sanitize the data stream before it reaches the cache.
+1. **Handling Dirty Raw Data ([`dirty_data_report.md`](./scripts/dirty_data_report.md)):**<br>Working with the raw API data taught me never to trust the source blindly. My Python scripts (and the visual evidence in [`dirty_data_proof.png`](./scripts/dirty_data_proof.png)) revealed anomalies in the production dataset, specifically internal "TEST" machines leaking into the public API and severe inconsistencies in country naming conventions. To prevent showing fake lockers to users, I implemented strict filtering rules within [`LockerDataCleaningPredicates.java`](./backend/smartpicker/src/main/java/com/inpost/smartpicker/predicate/LockerDataCleaningPredicates.java) to sanitize the data stream before it reaches the cache.
    
-2. **The "Low Interest" Trap (`low_interest_feasibility_report.md`):**<br>I initially considered using the `recommended_low_interest_box_machines_list` as a strict boolean filter for a "Stress-Free" mode. However, my analysis revealed that in Poland, over 60% of lockers are flagged as "low interest" by other machines, making it a highly relative metric rather than an absolute one. In other European countries, this data is 100% absent. This insight proved that a strict filter would either hide too many viable options or break entirely outside of Poland.
+2. **The "Low Interest" Trap ([`low_interest_feasibility_report.md`](./scripts/low_interest_feasibility_report.md)):**<br>I initially considered using the `recommended_low_interest_box_machines_list` as a strict boolean filter for a "Stress-Free" mode. However, my analysis revealed that in Poland, over 60% of lockers are flagged as "low interest" by other machines, making it a highly relative metric rather than an absolute one. In other European countries, this data is 100% absent. This insight proved that a strict filter would either hide too many viable options or break entirely outside of Poland.
    
-3. **The Telemetry Mirage (`telemetry_feasibility_report.md`):**<br>I wanted to heavily enhance the scoring algorithm by using real-time box availability (capacities for sizes A, B, C). Before implementing the complex Java logic, I ran a feasibility check. The data showed that while Great Britain has excellent telemetry coverage (99.6%), Poland and the rest of Europe have exactly 0% data availability for specific box sizes. This empirical evidence prevented me from building a "dead" feature.
+3. **The Telemetry Mirage ([`telemetry_feasibility_report.md`](./scripts/telemetry_feasibility_report.md)):**<br>I wanted to heavily enhance the scoring algorithm by using real-time box availability (capacities for sizes A, B, C). Before implementing the complex Java logic, I ran a feasibility check. The data showed that while Great Britain has excellent telemetry coverage (99.6%), Poland and the rest of Europe have exactly 0% data availability for specific box sizes. This empirical evidence prevented me from building a "dead" feature.
