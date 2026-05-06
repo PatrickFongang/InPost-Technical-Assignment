@@ -9,6 +9,7 @@ import {
   Calendar,
   Info,
   X,
+  LocateFixed,
 } from "lucide-react";
 
 function App() {
@@ -42,25 +43,32 @@ function App() {
     setSelectedLocker(null);
 
     try {
-      const formattedAddress = address
-        .trim()
-        .split(" ")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+      let userLat, userLon;
 
-      const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formattedAddress)}`;
-      const geoResponse = await fetch(geoUrl);
-      const geoData = await geoResponse.json();
+      if (address === "My Location" && mapCenter) {
+        userLat = mapCenter[0];
+        userLon = mapCenter[1];
+      } else {
+        const formattedAddress = address
+          .trim()
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
 
-      if (!geoData || geoData.length === 0) {
-        setError("Location not found. Try a different city or address.");
-        setIsLoading(false);
-        return;
+        const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formattedAddress)}`;
+        const geoResponse = await fetch(geoUrl);
+        const geoData = await geoResponse.json();
+
+        if (!geoData || geoData.length === 0) {
+          setError("Location not found. Try a different city or address.");
+          setIsLoading(false);
+          return;
+        }
+
+        userLat = parseFloat(geoData[0].lat);
+        userLon = parseFloat(geoData[0].lon);
+        setMapCenter([userLat, userLon]);
       }
-
-      const userLat = parseFloat(geoData[0].lat);
-      const userLon = parseFloat(geoData[0].lon);
-      setMapCenter([userLat, userLon]);
 
       const apiUrl = `http://localhost:8080/api/lockers/search`;
       const requestBody = {
@@ -89,6 +97,60 @@ function App() {
       setError("Network error while searching for location.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLocateMe = () => {
+    if ("geolocation" in navigator) {
+      setIsLoading(true);
+      setError(null);
+      setweatherInfo(null);
+      setSelectedLocker(null);
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            setMapCenter([userLat, userLon]);
+            setAddress("My Location"); 
+
+            const apiUrl = `http://localhost:8080/api/lockers/search`;
+            const requestBody = {
+              userLat: userLat,
+              userLon: userLon,
+              radiusInKm: radius,
+              thermoMode: thermo,
+              expectedDeliveryDate: deliveryDate ? deliveryDate : null,
+            };
+
+            const backendResponse = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+            });
+
+            if (!backendResponse.ok)
+              throw new Error(`Error from backend: ${backendResponse.status}`);
+
+            const responseData = await backendResponse.json();
+
+            setLockers(responseData.lockers || []);
+            setweatherInfo(responseData.weatherInfo || null);
+          } catch (err) {
+            console.error(err);
+            setError("Network error while searching for location.");
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        (error) => {
+          setError("Could not get your location. Please check browser permissions.");
+          setIsLoading(false);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by your browser.");
     }
   };
 
@@ -236,6 +298,14 @@ function App() {
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition-all"
               required
             />
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              className="absolute right-2 top-2 text-blue-500 hover:text-blue-700 transition-colors p-0.5 rounded-md hover:bg-blue-50"
+              title="Use my current location"
+            >
+              <LocateFixed className="w-5 h-5" />
+            </button>
           </div>
 
           <select
